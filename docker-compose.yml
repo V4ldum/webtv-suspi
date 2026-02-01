@@ -1,0 +1,21 @@
+services:
+    webtv:
+        image: ghcr.io/v4ldum/webtv:latest
+        restart: unless-stopped
+        networks:
+            - "netv6"
+        environment:
+            - TZ=Europe/Paris
+        volumes:
+            - type: bind
+              source: /root/webtv/webtv.env
+              target: /app/.env
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.webtv.tls=true"
+            - "traefik.http.routers.webtv.entrypoints=websecure"
+            - "traefik.http.routers.webtv.rule=Host(`webtv.valdum.dev`)"
+
+networks:
+    netv6:
+        external: true

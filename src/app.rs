@@ -310,3 +310,10 @@ fn HomePage() -> impl IntoView {
         </div>
     }
 }
+
+// TODO
+// - Caching data
+//   - Users for 10 hours
+//   - Streams for 5 minutes
+// - WASM compression
+// - Concurrent Twitch
