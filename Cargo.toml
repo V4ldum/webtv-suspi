@@ -22,6 +22,7 @@ reqwest = { version = "0.12.22", features = ["rustls-tls", "json"], optional = t
 serde = { version = "1.0.228", features = ["derive"]}
 dotenvy = { version = "0.15.7", optional = true}
 serde_json = "1.0.149"
+cached = { version = "0.56.0", features = ["proc_macro", "async"], optional = true }
 
 [features]
 hydrate = [
@@ -36,6 +37,7 @@ ssr = [
     "dep:tower-http",
     "dep:dotenvy",
     "dep:reqwest",
+    "dep:cached",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",

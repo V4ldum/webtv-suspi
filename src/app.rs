@@ -1,13 +1,19 @@
 use std::collections::HashMap;
 
+#[cfg(feature = "ssr")]
+use cached::proc_macro::cached;
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
+use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
     components::{Route, Router, Routes},
     path,
 };
+#[cfg(feature = "ssr")]
+use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use singlestage::{Avatar, AvatarImage, Badge, Theme, ThemeProvider};
+#[cfg(feature = "ssr")]
+use tokio::time::Duration;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -51,25 +57,30 @@ pub fn App() -> impl IntoView {
     }
 }
 
+#[cfg(feature = "ssr")]
 struct FetchStreamer(String, String);
 
+#[cfg(feature = "ssr")]
 #[derive(Debug, Deserialize)]
 struct TwitchUsersResponse {
     data: Vec<StreamerUserData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[cfg(feature = "ssr")]
+#[derive(Debug, Deserialize, Clone)]
 struct StreamerUserData {
     login: String,
     profile_image_url: String,
 }
 
+#[cfg(feature = "ssr")]
 #[derive(Debug, Deserialize)]
 struct TwitchStreamsResponse {
     data: Vec<StreamerStreamData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[cfg(feature = "ssr")]
+#[derive(Debug, Deserialize, Clone)]
 struct StreamerStreamData {
     user_login: String,
     title: String,
@@ -99,6 +110,7 @@ impl Streamer {
     }
 }
 
+#[cfg(feature = "ssr")]
 #[derive(Deserialize)]
 struct ClientCredentials {
     access_token: String,
@@ -106,8 +118,74 @@ struct ClientCredentials {
     token_type: String,
 }
 
+#[cfg(feature = "ssr")]
+#[cached(
+    time = 36000,
+    result = true,
+    sync_writes = "default",
+    key = "String",
+    convert = r#"{ "users".to_string() }"#
+)]
+async fn fetch_users_data(
+    client: &Client,
+    streamers_to_fetch: &[FetchStreamer],
+) -> Result<HashMap<String, StreamerUserData>, ServerFnError> {
+    let request_params = streamers_to_fetch
+        .iter()
+        .map(|s| format!("login={}", s.1))
+        .collect::<Vec<_>>()
+        .join("&");
+
+    let users_response = client
+        .get(format!("https://api.twitch.tv/helix/users?{}", request_params))
+        .send()
+        .await?
+        .json::<TwitchUsersResponse>()
+        .await?;
+
+    Ok(users_response
+        .data
+        .into_iter()
+        .map(|u| (u.login.clone().to_lowercase(), u))
+        .collect::<HashMap<_, _>>())
+}
+
+#[cfg(feature = "ssr")]
+#[cached(
+    time = 300,
+    result = true,
+    sync_writes = "default",
+    key = "String",
+    convert = r#"{ "streams".to_string() }"#
+)]
+async fn fetch_streams_data(
+    client: &Client,
+    streamers_to_fetch: &[FetchStreamer],
+) -> Result<HashMap<String, StreamerStreamData>, ServerFnError> {
+    let request_params = streamers_to_fetch
+        .iter()
+        .map(|s| format!("user_login={}", s.1))
+        .collect::<Vec<_>>()
+        .join("&");
+
+    let streams_response = client
+        .get(format!("https://api.twitch.tv/helix/streams?{}", request_params))
+        .send()
+        .await?
+        .json::<TwitchStreamsResponse>()
+        .await?;
+
+    Ok(streams_response
+        .data
+        .into_iter()
+        .map(|s| (s.user_login.clone(), s))
+        .collect::<HashMap<_, _>>())
+}
+
 #[server(GetStreamers)]
 async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
+    use axum::http::{HeaderMap, HeaderValue};
+
     // Secrets
     let client_id = dotenvy::var("TWITCH_CLIENT_ID").map_err(|_| ServerFnError::new("Missing TWITCH_CLIENT_ID"))?;
     let client_secret =
@@ -135,47 +213,19 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
     ];
 
     // Query Twitch
-    let client = reqwest::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert("Client-ID", HeaderValue::from_str(&client_id)?);
+    headers.insert(
+        header::AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", client_credentials.access_token))?,
+    );
+    let client = reqwest::Client::builder().default_headers(headers).build()?;
 
-    // User informations
-    let request_params = streamers_to_fetch
-        .iter()
-        .map(|s| format!("login={}", s.1))
-        .collect::<Vec<_>>()
-        .join("&");
-    let users_response = client
-        .get(format!("https://api.twitch.tv/helix/users?{}", request_params))
-        .header("Client-ID", &client_id)
-        .header("Authorization", format!("Bearer {}", client_credentials.access_token))
-        .send()
-        .await?
-        .json::<TwitchUsersResponse>()
-        .await?;
-    let mut users_map = users_response
-        .data
-        .into_iter()
-        .map(|u| (u.login.clone().to_lowercase(), u))
-        .collect::<HashMap<_, _>>();
-
-    // Stream informations
-    let request_params = streamers_to_fetch
-        .iter()
-        .map(|s| format!("user_login={}", s.1))
-        .collect::<Vec<_>>()
-        .join("&");
-    let streams_response = client
-        .get(format!("https://api.twitch.tv/helix/streams?{}", request_params))
-        .header("Client-ID", &client_id)
-        .header("Authorization", format!("Bearer {}", client_credentials.access_token))
-        .send()
-        .await?
-        .json::<TwitchStreamsResponse>()
-        .await?;
-    let mut streams_map = streams_response
-        .data
-        .into_iter()
-        .map(|s| (s.user_login.clone(), s))
-        .collect::<HashMap<_, _>>();
+    let res = tokio::try_join!(
+        fetch_users_data(&client, &streamers_to_fetch),
+        fetch_streams_data(&client, &streamers_to_fetch)
+    );
+    let (mut users_map, mut streams_map) = res?;
 
     let ret = streamers_to_fetch
         .into_iter()
@@ -310,10 +360,3 @@ fn HomePage() -> impl IntoView {
         </div>
     }
 }
-
-// TODO
-// - Caching data
-//   - Users for 10 hours
-//   - Streams for 5 minutes
-// - WASM compression
-// - Concurrent Twitch
