@@ -3,13 +3,13 @@ use std::collections::HashMap;
 #[cfg(feature = "ssr")]
 use cached::proc_macro::cached;
 use leptos::prelude::*;
-use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
+use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
     path,
 };
 #[cfg(feature = "ssr")]
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use singlestage::{Avatar, AvatarImage, Badge, Theme, ThemeProvider};
 #[cfg(feature = "ssr")]
@@ -57,7 +57,6 @@ pub fn App() -> impl IntoView {
     }
 }
 
-#[cfg(feature = "ssr")]
 struct FetchStreamer(String, String);
 
 #[cfg(feature = "ssr")]
@@ -66,7 +65,6 @@ struct TwitchUsersResponse {
     data: Vec<StreamerUserData>,
 }
 
-#[cfg(feature = "ssr")]
 #[derive(Debug, Deserialize, Clone)]
 struct StreamerUserData {
     login: String,
@@ -79,7 +77,6 @@ struct TwitchStreamsResponse {
     data: Vec<StreamerStreamData>,
 }
 
-#[cfg(feature = "ssr")]
 #[derive(Debug, Deserialize, Clone)]
 struct StreamerStreamData {
     user_login: String,
