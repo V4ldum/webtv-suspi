@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Duration};
+use std::collections::HashMap;
 
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
@@ -7,7 +7,7 @@ use leptos_router::{
     path,
 };
 use serde::{Deserialize, Serialize};
-use singlestage::{Avatar, AvatarFallback, AvatarImage, Badge, Theme, ThemeProvider};
+use singlestage::{Avatar, AvatarImage, Badge, Theme, ThemeProvider};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
