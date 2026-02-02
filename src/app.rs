@@ -224,7 +224,7 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
     );
     let (mut users_map, mut streams_map) = res?;
 
-    let ret = streamers_to_fetch
+    let mut streamers = streamers_to_fetch
         .into_iter()
         .filter_map(|s| {
             let user = users_map.remove(&s.1.to_lowercase())?;
@@ -232,28 +232,78 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
 
             Some(Streamer::from(s, user, stream))
         })
-        .collect();
+        .collect::<Vec<_>>();
 
-    Ok(ret)
+    streamers.sort_by_key(|s| (s.viewer_count.unwrap_or(0), s.display_name.to_lowercase()));
+    Ok(streamers)
 }
 
 /// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
     let streamers = Resource::new(|| (), |_| fetch_streamers());
+    let featured = RwSignal::new(None);
+    Effect::new(move || {
+        if let Some(Ok(streamers)) = streamers.get() && let Some(first_streamer) = streamers.first() && first_streamer.is_live {
+                featured.set(Some(first_streamer.channel_name.to_lowercase()))
+        }
+    });
 
     view! {
         <div class="px-4">
-            <iframe
-                src="https://twitch.tv/embed/yarrgi?parent=127.0.0.1"
-                class="w-full aspect-video"
-                // height="425"
-                // width="720"
-                // frameborder="0"
-                // scrolling="no"
-                allowfullscreen="true"
-            ></iframe>
+            // Stream
+            <div class="w-full aspect-video">
+                <Suspense fallback=move || {
+                    view! { <p>"Loading..."</p> }
+                }>
+                    {move || {
+                        let data = streamers.get();
+                        match data {
+                            Some(Ok(_)) => {
+                                match featured.get() {
+                                    Some(channel_name) => {
 
+                                        view! {
+                                            <iframe
+                                                src=format!(
+                                                    "https://twitch.tv/embed/{channel_name}?parent=127.0.0.1",
+                                                )
+                                                class="w-full h-full"
+                                                // height="425"
+                                                // width="720"
+                                                // frameborder="0"
+                                                // scrolling="no"
+                                                allowfullscreen="true"
+                                            ></iframe>
+                                        }
+                                            .into_any()
+                                    }
+                                    None => {
+                                        view! {
+                                            <div class="flex items-center justify-center w-full h-full">
+                                                <p class="text-xl font-semibold">
+                                                    "Frérot y'a personne qui stream"
+                                                </p>
+                                            </div>
+                                        }
+                                            .into_any()
+                                    }
+                                }
+                            }
+                            _ => {
+
+                                view! {
+                                    <div class="flex items-center justify-center w-full h-full">
+                                        <p class="text-xl font-semibold">"CKC"</p>
+                                    </div>
+                                }
+                                    .into_any()
+                            }
+                        }
+                    }}
+                </Suspense>
+            </div>
+            // Roster
             <div class="my-12">
                 <h2 class="text-xl font-bold">"Roster"</h2>
                 <Suspense fallback=move || {
@@ -318,6 +368,7 @@ fn HomePage() -> impl IntoView {
                                                                                 >
 
                                                                                     {viewer_count}
+                                                                                    " viewers"
                                                                                 </Badge>
                                                                             }
                                                                         })}
@@ -357,3 +408,10 @@ fn HomePage() -> impl IntoView {
         </div>
     }
 }
+
+// TODO
+// Check prod/env docker logs VPS
+// Fix erreur ressource externe
+// Set current streamer (or none)
+// Show selected streamer
+// Refresh access token when expired (only when expired)

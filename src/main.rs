@@ -17,6 +17,8 @@ async fn main() {
     // Content Security Policy for Twitch embed
     let is_dev = leptos_options.env == leptos::config::Env::DEV;
 
+    println!("isdev: {is_dev}");
+
     let connect_src = if is_dev {
         // Allow live reload WebSocket in dev
         "connect-src 'self' ws://127.0.0.1:3001 https://api.twitch.tv https://gql.twitch.tv https://*.twitch.tv wss://*.twitch.tv"
