@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Reverse, collections::HashMap};
 
 #[cfg(feature = "ssr")]
 use cached::proc_macro::cached;
@@ -207,6 +207,8 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
         FetchStreamer("Dife".to_string(), "zilakin".to_string()),
         FetchStreamer("Cruzz Croix V".to_string(), "cruzzxv".to_string()),
         FetchStreamer("Spanra".to_string(), "spannra".to_string()),
+        FetchStreamer("Gingi".to_string(), "gingitv".to_string()),
+        FetchStreamer("Pilav".to_string(), "pilavpowa".to_string())
     ];
 
     // Query Twitch
@@ -234,7 +236,7 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
         })
         .collect::<Vec<_>>();
 
-    streamers.sort_by_key(|s| (s.viewer_count.unwrap_or(0), s.display_name.to_lowercase()));
+    streamers.sort_by_key(|s| (Reverse(s.viewer_count.unwrap_or(0)), s.display_name.to_lowercase()));
     Ok(streamers)
 }
 
@@ -266,7 +268,7 @@ fn HomePage() -> impl IntoView {
                                         view! {
                                             <iframe
                                                 src=format!(
-                                                    "https://twitch.tv/embed/{channel_name}?parent=127.0.0.1",
+                                                    "https://player.twitch.tv/?channel={channel_name}&parent=127.0.0.1",
                                                 )
                                                 class="w-full h-full"
                                                 // height="425"
@@ -320,11 +322,19 @@ fn HomePage() -> impl IntoView {
                                                 {streamers
                                                     .into_iter()
                                                     .map(|streamer| {
+                                                        let is_live_featured = streamer.is_live;
+                                                        let channel_name_featured = streamer
+                                                            .channel_name
+                                                            .to_lowercase();
                                                         view! {
                                                             <div
                                                                 class="w-72 rounded-lg hover:bg-accent/40"
                                                                 on:click=move |_| {
-                                                                    leptos::logging::log!("Clicked on streamer");
+                                                                    if is_live_featured && let Some(current) = featured.get()
+                                                                        && current != channel_name_featured
+                                                                    {
+                                                                        featured.set(Some(channel_name_featured.clone()));
+                                                                    }
                                                                 }
                                                             >
                                                                 <div class="relative aspect-video">
@@ -410,8 +420,4 @@ fn HomePage() -> impl IntoView {
 }
 
 // TODO
-// Check prod/env docker logs VPS
-// Fix erreur ressource externe
-// Set current streamer (or none)
-// Show selected streamer
 // Refresh access token when expired (only when expired)

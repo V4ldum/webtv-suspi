@@ -4,7 +4,7 @@ async fn main() {
     use axum::Router;
     use leptos::logging::log;
     use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list};
     use tower_http::set_header::SetResponseHeaderLayer;
     use webtv::app::*;
 
@@ -16,8 +16,6 @@ async fn main() {
 
     // Content Security Policy for Twitch embed
     let is_dev = leptos_options.env == leptos::config::Env::DEV;
-
-    println!("isdev: {is_dev}");
 
     let connect_src = if is_dev {
         // Allow live reload WebSocket in dev
