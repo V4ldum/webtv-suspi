@@ -107,6 +107,13 @@ impl Streamer {
     }
 }
 
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct StreamerResponse {
+    base_addr: String,
+    streamers: Vec<Streamer>,
+}
+
 #[cfg(feature = "ssr")]
 #[derive(Deserialize)]
 struct ClientCredentials {
@@ -180,7 +187,7 @@ async fn fetch_streams_data(
 }
 
 #[server(GetStreamers)]
-async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
+async fn fetch_streamers() -> Result<StreamerResponse, ServerFnError> {
     use axum::http::{HeaderMap, HeaderValue};
 
     // Secrets
@@ -236,17 +243,23 @@ async fn fetch_streamers() -> Result<Vec<Streamer>, ServerFnError> {
         })
         .collect::<Vec<_>>();
 
+    let base_addr =
+        dotenvy::var("BASE_ADDR").unwrap_or_else(|_| "127.0.0.1".to_string());
+
     streamers.sort_by_key(|s| (Reverse(s.viewer_count.unwrap_or(0)), s.display_name.to_lowercase()));
-    Ok(streamers)
+    Ok(StreamerResponse {
+        base_addr,
+        streamers,
+    })
 }
 
 /// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
-    let streamers = Resource::new(|| (), |_| fetch_streamers());
+    let streamer_response = Resource::new(|| (), |_| fetch_streamers());
     let featured = RwSignal::new(None);
     Effect::new(move || {
-        if let Some(Ok(streamers)) = streamers.get() && let Some(first_streamer) = streamers.first() && first_streamer.is_live {
+        if let Some(Ok(streamer_response)) = streamer_response.get() && let Some(first_streamer) = streamer_response.streamers.first() && first_streamer.is_live {
                 featured.set(Some(first_streamer.channel_name.to_lowercase()))
         }
     });
@@ -259,16 +272,17 @@ fn HomePage() -> impl IntoView {
                     view! { <p>"Loading..."</p> }
                 }>
                     {move || {
-                        let data = streamers.get();
+                        let data = streamer_response.get();
                         match data {
-                            Some(Ok(_)) => {
+                            Some(Ok(response)) => {
                                 match featured.get() {
                                     Some(channel_name) => {
 
                                         view! {
                                             <iframe
                                                 src=format!(
-                                                    "https://player.twitch.tv/?channel={channel_name}&parent=127.0.0.1",
+                                                    "https://player.twitch.tv/?channel={channel_name}&parent={}",
+                                                    response.base_addr,
                                                 )
                                                 class="w-full h-full"
                                                 // height="425"
@@ -312,14 +326,15 @@ fn HomePage() -> impl IntoView {
                     view! { <p>"Loading streamers..."</p> }
                 }>
                     {move || {
-                        streamers
+                        streamer_response
                             .get()
                             .map(|result| {
                                 result
-                                    .map(|streamers| {
+                                    .map(|streamer_response| {
                                         view! {
                                             <div class="grid grid-cols-4 gap-x-4 gap-y-8 w-full my-4">
-                                                {streamers
+                                                {streamer_response
+                                                    .streamers
                                                     .into_iter()
                                                     .map(|streamer| {
                                                         let is_live_featured = streamer.is_live;
@@ -420,4 +435,6 @@ fn HomePage() -> impl IntoView {
 }
 
 // TODO
+// img-src blob? (check logs)
+// check in prod
 // Refresh access token when expired (only when expired)
