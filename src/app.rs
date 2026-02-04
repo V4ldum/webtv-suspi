@@ -214,8 +214,6 @@ async fn fetch_streamers() -> Result<StreamerResponse, ServerFnError> {
         FetchStreamer("Dife".to_string(), "zilakin".to_string()),
         FetchStreamer("Cruzz Croix V".to_string(), "cruzzxv".to_string()),
         FetchStreamer("Spanra".to_string(), "spannra".to_string()),
-        FetchStreamer("Gingi".to_string(), "gingitv".to_string()),
-        FetchStreamer("Pilav".to_string(), "pilavpowa".to_string())
     ];
 
     // Query Twitch
@@ -435,6 +433,4 @@ fn HomePage() -> impl IntoView {
 }
 
 // TODO
-// img-src blob? (check logs)
-// check in prod
 // Refresh access token when expired (only when expired)
