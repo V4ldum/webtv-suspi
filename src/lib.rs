@@ -1,4 +1,7 @@
 pub mod app;
+pub mod fetch_streamers;
+pub mod get_credentials;
+pub mod home_page;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
