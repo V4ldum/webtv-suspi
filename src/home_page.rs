@@ -12,9 +12,7 @@ fn StreamerCard(streamer: Streamer, featured: RwSignal<Option<String>>) -> impl 
         <div
             class="w-72 rounded-lg hover:bg-accent/40"
             on:click=move |_| {
-                if is_live_featured && let Some(current) = featured.get()
-                    && current != channel_name_featured
-                {
+                if is_live_featured && featured.get().as_ref() != Some(&channel_name_featured) {
                     featured.set(Some(channel_name_featured.clone()));
                 }
             }

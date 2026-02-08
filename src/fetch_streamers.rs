@@ -2,7 +2,7 @@
 use cached::proc_macro::cached;
 use leptos::prelude::*;
 #[cfg(feature = "ssr")]
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 #[cfg(feature = "ssr")]
@@ -182,6 +182,12 @@ pub async fn fetch_streamers() -> Result<StreamerResponse, ServerFnError> {
 
     let base_addr = dotenvy::var("BASE_ADDR").unwrap_or_else(|_| "127.0.0.1".to_string());
 
-    streamers.sort_by_key(|s| (Reverse(s.viewer_count.unwrap_or(0)), s.display_name.to_lowercase()));
+    streamers.sort_by_key(|s| {
+        (
+            Reverse(s.is_live),
+            Reverse(s.viewer_count.unwrap_or(0)),
+            s.display_name.to_lowercase(),
+        )
+    });
     Ok(StreamerResponse { base_addr, streamers })
 }

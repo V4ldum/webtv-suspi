@@ -4,7 +4,7 @@ async fn main() {
     use axum::Router;
     use leptos::logging::log;
     use leptos::prelude::*;
-    use leptos_axum::{LeptosRoutes, generate_route_list};
+    use leptos_axum::{generate_route_list, LeptosRoutes};
     use tower_http::set_header::SetResponseHeaderLayer;
     use webtv::app::*;
 
@@ -30,7 +30,7 @@ async fn main() {
         // unsafe-inline and unsafe-eval required by Twitch embed
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://embed.twitch.tv https://player.twitch.tv https://static.twitchcdn.net",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' https://*.twitch.tv https://static-cdn.jtvnw.net data:",
+        "img-src 'self' https://*.twitch.tv https://static-cdn.jtvnw.net data: blob:",
         connect_src,
         "media-src 'self' https://*.twitch.tv https://*.ttvnw.net blob:",
         "worker-src 'self' blob:",
