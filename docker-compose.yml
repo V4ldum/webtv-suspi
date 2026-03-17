@@ -10,6 +10,7 @@ services:
             - type: bind
               source: /root/webtv/webtv.env
               target: /app/.env
+              read_only: true
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.webtv.tls=true"
