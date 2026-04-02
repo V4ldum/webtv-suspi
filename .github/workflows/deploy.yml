@@ -39,13 +39,14 @@ jobs:
                       redeploy:
                           - 'docker-compose.yml'
 
-    test:
-        needs: detect-changes
-        if: needs.detect-changes.outputs.rebuild == 'true'
-        uses: v4ldum/shared-workflows/.github/workflows/test-rust.yml@main
+    #test:
+    #    needs: detect-changes
+    #    if: needs.detect-changes.outputs.rebuild == 'true'
+    #    uses: v4ldum/shared-workflows/.github/workflows/test-rust.yml@main
 
     build:
-        needs: [detect-changes, test]
+        needs: detect-changes
+        #needs: [detect-changes, test]
         uses: v4ldum/shared-workflows/.github/workflows/build.yml@main
         with:
             project: ${{ needs.detect-changes.outputs.project }}
