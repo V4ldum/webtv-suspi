@@ -13,6 +13,15 @@ RUN rustup target add wasm32-unknown-unknown
 RUN cargo leptos build --release
 
 
+FROM busybox:musl AS tools
+RUN mkdir -p /tools && \
+    cp /bin/busybox /tools/ && \
+    cd /tools && \
+    ln -s busybox sh && \
+    ln -s busybox test && \
+    ln -s busybox touch
+
+
 FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
 
