@@ -25,6 +25,7 @@ RUN mkdir -p /tools && \
 FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
 
+COPY --from=tools /tools/ /bin/
 COPY --from=build /work/target/release/webtv webtv
 COPY --from=build /work/target/site site
 
