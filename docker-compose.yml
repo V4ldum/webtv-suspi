@@ -24,4 +24,5 @@ services:
 
 networks:
     netv6:
+        name: netv6
         external: true
