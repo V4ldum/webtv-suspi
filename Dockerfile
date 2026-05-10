@@ -22,7 +22,7 @@ RUN mkdir -p /tools && \
     ln -s busybox touch
 
 
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM gcr.io/distroless/cc-debian13:nonroot
 WORKDIR /app
 
 COPY --from=tools /tools/ /bin/
