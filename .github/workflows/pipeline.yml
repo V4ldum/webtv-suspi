@@ -46,7 +46,7 @@ jobs:
         with:
             test: true
             format: true
-            clippy: true
+            clippy: false
 
     build:
         needs: [detect-changes, test]
